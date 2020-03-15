@@ -361,7 +361,7 @@ int parse_handshake(ws_ctx_t *ws_ctx, char *handshake) {
     char *start, *end;
     headers_t *headers = ws_ctx->headers;
 
-    //printf("handshake:\n%s\n",handshake);
+    handler_msg("got handshake request:\n%s\n",handshake);
 
     headers->key1[0] = '\0';
     headers->key2[0] = '\0';
@@ -391,7 +391,7 @@ int parse_handshake(ws_ctx_t *ws_ctx, char *handshake) {
 
     start = strstr(handshake, "\r\nSec-WebSocket-Version: ");
     if (start) {
-        dbg("found Sec-WebSocket-Version heder. use HyBi/RFC 6455");
+        dbg("found Sec-WebSocket-Version header. use HyBi/RFC 6455 handshake");
         // HyBi/RFC 6455
         start += 25;
         end = strstr(start, "\r\n");
@@ -426,11 +426,13 @@ int parse_handshake(ws_ctx_t *ws_ctx, char *handshake) {
             end = strstr(start, "\r\n");
             strncpy(headers->protocols, start, end-start);
             headers->protocols[end-start] = '\0';
+            dbg("set protocols '%s' from Sec-WebSocket-Protocol", headers->protocols);
         } else {
+            dbg("set protocol to 'binary'");
             strcpy(headers->protocols, "binary");
         }
     } else {
-        dbg("no Sec-WebSocket-Version header use Hixie 75 or 76");
+        dbg("no Sec-WebSocket-Version header use Hixie 75 or 76 handshake");
         // Hixie 75 or 76
         ws_ctx->hybi = 0;
 
@@ -441,7 +443,7 @@ int parse_handshake(ws_ctx_t *ws_ctx, char *handshake) {
         }
         start += 4;
         if (strlen(start) == 8) {
-            dbg("use Hixie 76");
+            dbg("use Hixie 76 handshake");
             ws_ctx->hixie = 76;
             strncpy(headers->key3, start, 8);
             headers->key3[8] = '\0';
@@ -466,12 +468,11 @@ int parse_handshake(ws_ctx_t *ws_ctx, char *handshake) {
             strncpy(headers->key2, start, end-start);
             headers->key2[end-start] = '\0';
         } else {
-            dbg("use Hixie 75");
+            dbg("use Hixie 75 handshake");
             ws_ctx->hixie = 75;
         }
     }
 
-    //ws_ctx->hixie
     //https://tools.ietf.org/html/rfc6455#section-10.2
     headers->origin[0] = '\0';
     start = strstr(handshake, "\r\nOrigin: ");
@@ -624,7 +625,8 @@ ws_ctx_t *do_handshake(int sock) {
     if (ws_ctx->hybi > 0) {
         handler_msg("using protocol HyBi/IETF 6455 %d\n", ws_ctx->hybi);
         gen_sha1(headers, sha1);
-        snprintf(response, sizeof(response), SERVER_HANDSHAKE_HYBI, sha1, response_protocol);
+        //snprintf(response, sizeof(response), SERVER_HANDSHAKE_HYBI, sha1, response_protocol);
+        snprintf(response, sizeof(response), SERVER_HANDSHAKE_HYBI_NO_PROTOCOL, sha1);
     } else {
         if (ws_ctx->hixie == 76) {
             handler_msg("using protocol Hixie 76\n");
@@ -639,7 +641,7 @@ ws_ctx_t *do_handshake(int sock) {
                  pre, scheme, headers->host, headers->path, pre, "base64", trailer);
     }
     
-    //handler_msg("response: %s\n", response);
+    handler_msg("handshake response:\n%s\n", response);
     ws_send(ws_ctx, response, strlen(response));
     
     return ws_ctx;

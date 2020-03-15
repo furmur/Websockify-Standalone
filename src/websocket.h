@@ -16,6 +16,13 @@ Sec-WebSocket-Accept: %s\r\n\
 Sec-WebSocket-Protocol: %s\r\n\
 \r\n"
 
+#define SERVER_HANDSHAKE_HYBI_NO_PROTOCOL "HTTP/1.1 101 Switching Protocols\r\n\
+Upgrade: websocket\r\n\
+Connection: Upgrade\r\n\
+Sec-WebSocket-Accept: %s\r\n\
+\r\n"
+
+
 #define HYBI_GUID "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
 
 #define HYBI10_ACCEPTHDRLEN 29
