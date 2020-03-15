@@ -354,37 +354,42 @@ int decode_hybi(unsigned char *src, size_t srclength,
 }
 
 
+#define dbg(fmt, args...) handler_msg(fmt "\n", ##args)
+//#define dbg(...) ;
 
 int parse_handshake(ws_ctx_t *ws_ctx, char *handshake) {
     char *start, *end;
     headers_t *headers = ws_ctx->headers;
-    
+
+    //printf("handshake:\n%s\n",handshake);
+
     headers->key1[0] = '\0';
     headers->key2[0] = '\0';
     headers->key3[0] = '\0';
-    
+
     if ((strlen(handshake) < 92) || (bcmp(handshake, "GET ", 4) != 0)) {
         return 0;
     }
     start = handshake+4;
     end = strstr(start, " HTTP/1.1");
     if (!end) {
+        dbg("expected HTTP/1.1 proto");
         return 0;
-        
     }
     strncpy(headers->path, start, end-start);
     headers->path[end-start] = '\0';
-    
+
     start = strstr(handshake, "\r\nHost: ");
     if (!start) {
+        dbg("no Host header");
         return 0;
-        
     }
     start += 8;
     end = strstr(start, "\r\n");
     strncpy(headers->host, start, end-start);
     headers->host[end-start] = '\0';
-    
+
+    //https://tools.ietf.org/html/rfc6455#section-10.2
     headers->origin[0] = '\0';
     start = strstr(handshake, "\r\nOrigin: ");
     if (start) {
@@ -392,17 +397,18 @@ int parse_handshake(ws_ctx_t *ws_ctx, char *handshake) {
     } else {
         start = strstr(handshake, "\r\nSec-WebSocket-Origin: ");
         if (!start) {
+            dbg("no Origin or Sec-WebSocket-Origin header");
             return 0;
-            
         }
         start += 24;
     }
     end = strstr(start, "\r\n");
     strncpy(headers->origin, start, end-start);
     headers->origin[end-start] = '\0';
-    
+
     start = strstr(handshake, "\r\nSec-WebSocket-Version: ");
     if (start) {
+        dbg("found Sec-WebSocket-Version heder. use HyBi/RFC 6455");
         // HyBi/RFC 6455
         start += 25;
         end = strstr(start, "\r\n");
@@ -413,8 +419,8 @@ int parse_handshake(ws_ctx_t *ws_ctx, char *handshake) {
         
         start = strstr(handshake, "\r\nSec-WebSocket-Key: ");
         if (!start) {
+            dbg("found Sec-WebSocket-Version header. use HyBi/RFC 6455");
             return 0;
-            
         }
         start += 21;
         end = strstr(start, "\r\n");
@@ -441,24 +447,26 @@ int parse_handshake(ws_ctx_t *ws_ctx, char *handshake) {
             strcpy(headers->protocols, "binary");
         }
     } else {
+        dbg("no Sec-WebSocket-Version heder. use Hixie 75 or 76");
         // Hixie 75 or 76
         ws_ctx->hybi = 0;
-        
+
         start = strstr(handshake, "\r\n\r\n");
         if (!start) {
+            dbg("no trailing newlines");
             return 0;
-            
         }
         start += 4;
         if (strlen(start) == 8) {
+            dbg("use Hixie 76");
             ws_ctx->hixie = 76;
             strncpy(headers->key3, start, 8);
             headers->key3[8] = '\0';
-            
+
             start = strstr(handshake, "\r\nSec-WebSocket-Key1: ");
             if (!start) {
+                dbg("no Sec-WebSocket-Key1 header");
                 return 0;
-                
             }
             start += 22;
             end = strstr(start, "\r\n");
@@ -467,19 +475,19 @@ int parse_handshake(ws_ctx_t *ws_ctx, char *handshake) {
             
             start = strstr(handshake, "\r\nSec-WebSocket-Key2: ");
             if (!start) {
+                dbg("no Sec-WebSocket-Key2 header");
                 return 0;
-                
             }
             start += 22;
             end = strstr(start, "\r\n");
             strncpy(headers->key2, start, end-start);
             headers->key2[end-start] = '\0';
         } else {
+            dbg("use Hixie 75");
             ws_ctx->hixie = 75;
         }
-        
     }
-    
+
     return 1;
 }
 
