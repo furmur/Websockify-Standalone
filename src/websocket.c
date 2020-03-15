@@ -389,23 +389,6 @@ int parse_handshake(ws_ctx_t *ws_ctx, char *handshake) {
     strncpy(headers->host, start, end-start);
     headers->host[end-start] = '\0';
 
-    //https://tools.ietf.org/html/rfc6455#section-10.2
-    headers->origin[0] = '\0';
-    start = strstr(handshake, "\r\nOrigin: ");
-    if (start) {
-        start += 10;
-    } else {
-        start = strstr(handshake, "\r\nSec-WebSocket-Origin: ");
-        if (!start) {
-            dbg("no Origin or Sec-WebSocket-Origin header");
-            return 0;
-        }
-        start += 24;
-    }
-    end = strstr(start, "\r\n");
-    strncpy(headers->origin, start, end-start);
-    headers->origin[end-start] = '\0';
-
     start = strstr(handshake, "\r\nSec-WebSocket-Version: ");
     if (start) {
         dbg("found Sec-WebSocket-Version heder. use HyBi/RFC 6455");
@@ -447,7 +430,7 @@ int parse_handshake(ws_ctx_t *ws_ctx, char *handshake) {
             strcpy(headers->protocols, "binary");
         }
     } else {
-        dbg("no Sec-WebSocket-Version heder. use Hixie 75 or 76");
+        dbg("no Sec-WebSocket-Version header use Hixie 75 or 76");
         // Hixie 75 or 76
         ws_ctx->hybi = 0;
 
@@ -486,6 +469,27 @@ int parse_handshake(ws_ctx_t *ws_ctx, char *handshake) {
             dbg("use Hixie 75");
             ws_ctx->hixie = 75;
         }
+    }
+
+    //ws_ctx->hixie
+    //https://tools.ietf.org/html/rfc6455#section-10.2
+    headers->origin[0] = '\0';
+    start = strstr(handshake, "\r\nOrigin: ");
+    if (start) {
+        start += 10;
+    } else {
+        start = strstr(handshake, "\r\nSec-WebSocket-Origin: ");
+        if (start) {
+            start += 24;
+        }
+    }
+    if(start) {
+        end = strstr(start, "\r\n");
+        strncpy(headers->origin, start, end-start);
+        headers->origin[end-start] = '\0';
+    } else if(ws_ctx->hixie) {
+        dbg("no Origin or Sec-WebSocket-Origin header on using hixie %d",ws_ctx->hixie);
+        return 0;
     }
 
     return 1;
