@@ -18,6 +18,6 @@ Send: b'test'
 
 int main(int argc, char **argv)
 {
-    start("127.0.0.1");
+    start();
     return EXIT_SUCCESS;
 }
