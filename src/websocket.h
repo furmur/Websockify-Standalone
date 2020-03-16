@@ -56,6 +56,9 @@ typedef struct {
     char      *cout_buf;
     char      *tin_buf;
     char      *tout_buf;
+
+    char target_host[256];
+    int target_port;
 } ws_ctx_t;
 
 typedef struct {

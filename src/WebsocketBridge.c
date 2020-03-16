@@ -49,9 +49,6 @@ fprintf(stderr, "%s\n\n", USAGE); \
 fprintf(stderr, fmt , ## args); \
 exit(1);
 
-char target_host[256];
-int target_port;
-
 extern int pipe_error;
 extern settings_t settings;
 
@@ -241,7 +238,7 @@ void proxy_handler(ws_ctx_t *ws_ctx) {
     int tsock = 0;
     struct sockaddr_in taddr;
     
-    handler_msg("connecting to: %s:%d\n", target_host, target_port);
+    handler_msg("connecting to: %s:%d\n", ws_ctx->target_host, ws_ctx->target_port);
     
     tsock = socket(AF_INET, SOCK_STREAM, 0);
     if (tsock < 0) {
@@ -251,12 +248,13 @@ void proxy_handler(ws_ctx_t *ws_ctx) {
     }
     bzero((char *) &taddr, sizeof(taddr));
     taddr.sin_family = AF_INET;
-    taddr.sin_port = htons(target_port);
+    taddr.sin_port = htons(ws_ctx->target_port);
     
     /* Resolve target address */
-    if (resolve_host(&taddr.sin_addr, target_host) < -1) {
-        handler_emsg("Could not resolve target address: %s\n",
-                     strerror(errno));
+    if (resolve_host(&taddr.sin_addr, ws_ctx->target_host) == -1) {
+        handler_emsg("Could not resolve target address\n");
+        close(tsock);
+        return;
     }
     
     if (connect(tsock, (struct sockaddr *) &taddr, sizeof(taddr)) < 0) {
@@ -276,7 +274,7 @@ void proxy_handler(ws_ctx_t *ws_ctx) {
     close(tsock);
 }
 
-void start(char const *target)
+void start()
 {
     if (!settings.cert) {
         /* Make sure it's always set to something */
@@ -291,10 +289,7 @@ void start(char const *target)
     
     strcpy(settings.listen_host, "127.0.0.1");
     settings.listen_port  = 52525;
-    
-    strcpy(target_host, target);
-    target_port = 5000;
-   
+
     settings.handler = proxy_handler;
     start_server();
     

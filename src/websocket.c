@@ -358,7 +358,8 @@ int decode_hybi(unsigned char *src, size_t srclength,
 //#define dbg(...) ;
 
 int parse_handshake(ws_ctx_t *ws_ctx, char *handshake) {
-    char *start, *end;
+    char *start, *end,
+         *uri_start, *uri_end;
     headers_t *headers = ws_ctx->headers;
 
     handler_msg("got handshake request:\n%s\n",handshake);
@@ -370,12 +371,13 @@ int parse_handshake(ws_ctx_t *ws_ctx, char *handshake) {
     if ((strlen(handshake) < 92) || (bcmp(handshake, "GET ", 4) != 0)) {
         return 0;
     }
-    start = handshake+4;
+    uri_start = start = handshake+4;
     end = strstr(start, " HTTP/1.1");
     if (!end) {
         dbg("expected HTTP/1.1 proto");
         return 0;
     }
+    uri_end = end;
     strncpy(headers->path, start, end-start);
     headers->path[end-start] = '\0';
 
@@ -490,6 +492,77 @@ int parse_handshake(ws_ctx_t *ws_ctx, char *handshake) {
         headers->origin[end-start] = '\0';
     } else if(ws_ctx->hixie) {
         dbg("no Origin or Sec-WebSocket-Origin header on using hixie %d",ws_ctx->hixie);
+        return 0;
+    }
+
+#define EXPECTED_URI_FORMAT "expected URI format /?host=TARGET_HOST&port=TARGET_PORT"
+
+    //parse target host/port attributes from URI
+    handler_msg("uri: '%.*s'\n",(int)(uri_end - uri_start), uri_start);
+    start = memchr(uri_start, '?', uri_end - uri_start);
+    if(!start) {
+        dbg("got uri without parameters. " EXPECTED_URI_FORMAT);
+        return 0;
+    }
+    start++;
+    dbg("start %p uri_end %p", start, uri_end);
+    if(start == uri_end) {
+        dbg("empty URI parameters. " EXPECTED_URI_FORMAT);
+        return 0;
+    }
+    end = memchr(start, '&',uri_end - start);
+    if(!end) {
+        dbg("got uri without parameters separator &. " EXPECTED_URI_FORMAT);
+        return 0;
+    }
+    //parse host= parameter
+    dbg("start %p end %p", start, end);
+    if(start == end) {
+        dbg("got uri with empty first parameter. " EXPECTED_URI_FORMAT);
+        return 0;
+    }
+    if(end - start < 6/* "host=" and at least one value symbol */) {
+        dbg("uri first parameter is too short to be valid. " EXPECTED_URI_FORMAT);
+        return 0;
+    }
+    if(bcmp(start, "host=", 5) != 0) {
+        dbg("unexpected first uri parameter. " EXPECTED_URI_FORMAT);
+        return 0;
+    }
+    start+=5; /* skip "host=" */
+    memcpy(ws_ctx->target_host, start, end-start);
+    ws_ctx->target_host[end-start] = '\0';
+    dbg("parsed target host: '%s'",ws_ctx->target_host);
+
+    //parse port= parameter
+    dbg("start: %p, end: %p, uri_end: %p", start, end, uri_end);
+    end++;
+    if(end == uri_end) {
+        dbg("got uri with empty second parameter. " EXPECTED_URI_FORMAT);
+        return 0;
+    }
+    if(0!=memchr(end, '&',uri_end - end)) {
+        dbg("too many uri parameters. " EXPECTED_URI_FORMAT);
+        return 0;
+    }
+    if(uri_end - end < 6/* "port=" and at least one value symbol */) {
+        dbg("uri second parameter is too short to be valid. " EXPECTED_URI_FORMAT);
+        return 0;
+    }
+    if(bcmp(end, "port=", 5) != 0) {
+        dbg("unexpected first uri parameter. " EXPECTED_URI_FORMAT);
+        return 0;
+    }
+    end+=5; /* skip "port=" */
+    *uri_end = '\0';
+    ws_ctx->target_port = atoi(end);
+    if(!ws_ctx->target_port) {
+        dbg("unexpected port value '%s'. " EXPECTED_URI_FORMAT,end);
+        return 0;
+    }
+    dbg("parsed target port: %d",ws_ctx->target_port);
+    if(ws_ctx->target_port <= 0 || ws_ctx->target_port > 0xffff) {
+        dbg("port value %d is not within unsigned short range",ws_ctx->target_port);
         return 0;
     }
 

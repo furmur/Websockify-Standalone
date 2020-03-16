@@ -1,6 +1,6 @@
 #ifndef WebsocketBridge_h
 #define WebsocketBridge_h
 
-void start(char const *target);
+void start();
 
 #endif /* WebsocketBridge_h */
