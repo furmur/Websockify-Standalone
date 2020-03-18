@@ -5,12 +5,14 @@
 #include <string.h>
 
 #include "WebsocketBridge.h"
+#include "version.h"
 
 const char* progname = NULL;
 
 void usage(int exit_code)
 {
     printf(
+    "version: " APP_VERSION "\n"
     "Usage: websockify [-h] [-i listen_ip] [-p port]\n"
     "\n"
     "Options:\n"
