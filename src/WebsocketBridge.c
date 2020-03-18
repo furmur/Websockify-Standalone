@@ -274,23 +274,22 @@ void proxy_handler(ws_ctx_t *ws_ctx) {
     close(tsock);
 }
 
-void start()
+void start(char *listen_host, int listen_port)
 {
     if (!settings.cert) {
         /* Make sure it's always set to something */
         settings.cert = "self.pem";
     }
     settings.key = "";
-    
+
     settings.verbose      = 1;
     settings.ssl_only     = 0;
     settings.daemon       = 0;
     settings.run_once     = 0;
-    
-    strcpy(settings.listen_host, "127.0.0.1");
-    settings.listen_port  = 52525;
+
+    strcpy(settings.listen_host, listen_host);
+    settings.listen_port  = listen_port;
 
     settings.handler = proxy_handler;
     start_server();
-    
 }
