@@ -1,0 +1,14 @@
+#!/usr/bin/make -f
+
+#export DH_VERBOSE=1
+#export DEB_BUILD_OPTIONS:=$(DEB_BUILD_OPTIONS) nostrip
+export DEB_BUILD_OPTIONS:=$(DEB_BUILD_OPTIONS)
+
+dh_args=--buildsysteim=cmake --builddirectory=build --parallel
+#dh_opts=$(addprefix -O,$(dh_args))
+
+%:
+	dh $@ $(dh_args)
+
+#override_dh_strip:
+#	#do not strip binaries
