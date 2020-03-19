@@ -1,0 +1,5 @@
+# WS listen IP
+ADDR=127.0.0.1
+
+# WS listen port
+PORT=52525

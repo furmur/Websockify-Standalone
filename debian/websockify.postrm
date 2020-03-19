@@ -1,0 +1,14 @@
+#!/bin/bash
+set -e
+
+case "$1" in
+    purge)
+        deluser websockify &>/dev/null || true
+        ;;
+esac
+
+deb-systemd-invoke restart rsyslog.service >/dev/null || true
+
+#DEBHELPER#
+
+exit 0

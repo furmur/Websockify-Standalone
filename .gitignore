@@ -3,5 +3,6 @@ CMakeLists.txt.user
 debian/.debhelper
 debian/debhelper-build-stamp
 debian/files
-debian/virtualizm-websockify.substvars
-debian/virtualizm-websockify
+debian/websockify.substvars
+debian/websockify
+debian/*.debhelper

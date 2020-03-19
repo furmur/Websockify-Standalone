@@ -25,3 +25,4 @@ else(EXISTS ${CMAKE_SOURCE_DIR}/.git)
 endif(EXISTS ${CMAKE_SOURCE_DIR}/.git)
 
 add_subdirectory(src)
+add_subdirectory(debian)
