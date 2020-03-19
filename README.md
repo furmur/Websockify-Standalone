@@ -4,9 +4,9 @@ Simple daemon to proxify WebSocket connections to TCP
 
 WebSocket client connects to the uri:
 
-ws://*proxy_host*:*proxy_port*?host=*tcp_dst_host*&port=*tcp_dst_port*
+ws://**proxy_host**:**proxy_port**?host=**tcp_dst_host**&port=**tcp_dst_port**
 
-to be proxified to the *tcp_dst_host*:*tcp_dst_port* TCP destination
+to be proxified to the **tcp_dst_host**:**tcp_dst_port** TCP destination
 
 ## Building from sources (Debian)
 
