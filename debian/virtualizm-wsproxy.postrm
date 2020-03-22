@@ -7,7 +7,7 @@ case "$1" in
         ;;
 esac
 
-#deb-systemd-invoke restart rsyslog.service >/dev/null || true
+deb-systemd-invoke restart rsyslog.service >/dev/null || true
 
 #DEBHELPER#
 

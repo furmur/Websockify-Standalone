@@ -10,7 +10,7 @@ case "$1" in
 	#    mkdir -p /var/log/virtualizm-wsproxy
 	#fi
 
-        #deb-systemd-invoke restart rsyslog.service >/dev/null || true
+        deb-systemd-invoke restart rsyslog.service >/dev/null || true
 esac
 
 #DEBHELPER#
