@@ -1,3 +1,7 @@
+#pragma once
+
+#include <netinet/in.h>
+
 #define BUFSIZE 65536
 #define DBUFSIZE (BUFSIZE * 3) / 4 - 20
 

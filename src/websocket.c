@@ -147,7 +147,7 @@ int encode_hixie(u_char const *src, size_t srclength,
 int decode_hixie(char *src, size_t srclength,
                  u_char *target, size_t targsize,
                  unsigned int *opcode, unsigned int *left) {
-    char *start, *end, cntstr[4];
+    char *start, *end, cntstr[11];
     int i, len, framecount = 0, retlen = 0;
     unsigned char chr;
     if ((src[0] != '\x00') || (src[srclength-1] != '\xff')) {
@@ -179,7 +179,7 @@ int decode_hixie(char *src, size_t srclength,
         framecount++;
     } while (end < (src+srclength-1));
     if (framecount > 1) {
-        snprintf(cntstr, 3, "%d", framecount);
+        snprintf(cntstr, 11, "%d", framecount);
         traffic(cntstr);
     }
     *left = 0;
@@ -243,7 +243,7 @@ int decode_hybi(unsigned char *src, size_t srclength,
                 unsigned int *opcode, unsigned int *left)
 {
     unsigned char *frame, *mask, *payload, save_char;
-    char cntstr[4];
+    char cntstr[11];
     int masked = 0;
     int i = 0, len, framecount = 0;
     size_t remaining;
@@ -345,7 +345,7 @@ int decode_hybi(unsigned char *src, size_t srclength,
     }
     
     if (framecount > 1) {
-        snprintf(cntstr, 3, "%d", framecount);
+        snprintf(cntstr, 11, "%d", framecount);
         traffic(cntstr);
     }
     
@@ -608,12 +608,12 @@ static void gen_sha1(headers_t *headers, char *target) {
     SHA1_CTX c;
     unsigned char hash[20];
     int r;
-    
+
     SHA1Init(&c);
-    SHA1Update(&c, headers->key1, strlen(headers->key1));
+    SHA1Update(&c, (const unsigned char *)headers->key1, strlen(headers->key1));
     SHA1Update(&c, HYBI_GUID, 36);
     SHA1Final(hash, &c);
-    
+
     r = b64_ntop(hash, sizeof hash, target, HYBI10_ACCEPTHDRLEN);
     //assert(r == HYBI10_ACCEPTHDRLEN - 1);
 }
@@ -730,12 +730,21 @@ void signal_handler(int sig) {
 
 void daemonize(int keepfd) {
     int pid, i;
-    
+
     umask(0);
-    chdir("/");
-    setgid(getgid());
-    setuid(getuid());
-    
+    if(0!=chdir("/")) {
+        fprintf(stderr, "daemonize: failed chdir(\"/\"): %m");
+        exit(1);
+    }
+    if(0!=setgid(getgid())) {
+        fprintf(stderr, "daemonize: failed setgid(%d): %m",getgid());
+        exit(1);
+    }
+    if(0!=setuid(getuid())) {
+        fprintf(stderr, "daemonize: failed setuid(%d): %m",getuid());
+        exit(1);
+    }
+
     /* Double fork to daemonize */
     pid = fork();
     if (pid<0) { fatal("fork error"); }
@@ -757,9 +766,14 @@ void daemonize(int keepfd) {
             printf("keeping fd %d\n", keepfd);
         }
     }
-    i=open("/dev/null", O_RDWR);  // Redirect stdin
-    dup(i);                       // Redirect stdout
-    dup(i);                       // Redirect stderr
+
+    i = open("/dev/null", O_RDWR);  // Redirect stdin
+    if(-1==dup(i)) { // Redirect stdout
+        fprintf(stderr, "daemonize: failed to duplicate /dev/null for stdout: %m");
+    }
+    if(-1==dup(i)) { // Redirect stderr
+        fprintf(stderr, "daemonize: failed to duplicate /dev/null for stderr: %m");
+    }
 }
 
 
@@ -778,14 +792,10 @@ void start_server() {
     serv_addr.sin_port = htons(settings.listen_port);
     
     /* Resolve listen address */
-    if (settings.listen_host && (settings.listen_host[0] != '\0')) {
-        if (resolve_host(&serv_addr.sin_addr, settings.listen_host) < -1) {
-            fatal("Could not resolve listen address");
-        }
-    } else {
-        serv_addr.sin_addr.s_addr = INADDR_ANY;
+    if (resolve_host(&serv_addr.sin_addr, settings.listen_host) < -1) {
+        fatal("Could not resolve listen address");
     }
-    
+
     setsockopt(lsock, SOL_SOCKET, SO_REUSEADDR, (char *)&sopt, sizeof(sopt));
     if (bind(lsock, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0) {
         fatal("ERROR on binding listener socket");
