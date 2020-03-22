@@ -3,18 +3,17 @@ Description= WS to TCP proxy
 After=local-fs.target network.target time-sync.target
 
 [Service]
-EnvironmentFile=/etc/default/websockify
-PIDFile=/run/websockify.pid
-User=websockify
+EnvironmentFile=/etc/default/virtualizm-wsproxy
+User=wsproxy
 PermissionsStartOnly=true
-ExecStart=/usr/bin/websockify -i ${ADDR} -p ${PORT}
+ExecStart=/usr/bin/virtualizm-wsproxy -i ${ADDR} -p ${PORT}
 
 #Restart=on-failure
 #RestartSec=1s
 
 StandardOutput=syslog
 StandardError=syslog
-SyslogIdentifier=websockify
+SyslogIdentifier=virtualizm-wsproxy
 
 [Install]
 WantedBy=multi-user.target

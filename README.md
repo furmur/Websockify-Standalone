@@ -17,14 +17,11 @@ to be proxified to the **tcp_dst_host**:**tcp_dst_port** TCP destination
 
 ### get sources
 ```sh
-$ git clone https://github.com/furmur/virtualizm-websockify.git
-$ cd virtualizm-websockify
+$ git clone https://github.com/furmur/virtualizm-wsproxy.git
+$ cd virtualizm-wsproxy
 ```
 
 ### build deb package
 ```sh
 $ debuild -us -uc -b
 ```
-
-[Yeti]:https://yeti-switch.org/
-[Documentation]:https://yeti-switch.org/docs/en/

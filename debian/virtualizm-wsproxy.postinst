@@ -1,0 +1,18 @@
+#!/bin/bash
+set -e
+
+case "$1" in 
+    configure)
+	adduser --quiet --system --group --disabled-password --shell /bin/false \
+	--gecos "virtualizm-wsproxy servce" --home /var/log/virtualizm-wsproxy wsproxy || true
+
+	#if [ ! -d /var/log/virtualizm-wsproxy ]; then 
+	#    mkdir -p /var/log/virtualizm-wsproxy
+	#fi
+
+        #deb-systemd-invoke restart rsyslog.service >/dev/null || true
+esac
+
+#DEBHELPER#
+
+exit 0

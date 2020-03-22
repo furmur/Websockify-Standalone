@@ -1,4 +1,4 @@
-/var/log/websockify/websockify.log {
+/var/log/virtualizm-wsproxy/virtualizm-wsproxy.log {
     daily
     rotate 7
     copytruncate

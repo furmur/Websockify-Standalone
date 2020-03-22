@@ -1,6 +1,6 @@
 cmake_minimum_required (VERSION 2.8)
 
-project(websockify)
+project(virtualizm-wsproxy)
 
 if(EXISTS ${CMAKE_SOURCE_DIR}/.git)
     find_package(Git)

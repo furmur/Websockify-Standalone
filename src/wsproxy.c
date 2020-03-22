@@ -13,7 +13,7 @@ void usage(int exit_code)
 {
     printf(
     "version: " APP_VERSION "\n"
-    "Usage: websockify [-h] [-i listen_ip] [-p port]\n"
+    "Usage: virtualizm-wsproxy [-h] [-i listen_ip] [-p port]\n"
     "\n"
     "Options:\n"
     "  -i listen_ip : IP adddress for WS socket\n"

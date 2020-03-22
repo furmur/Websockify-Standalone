@@ -10,5 +10,8 @@ dh_args=--buildsysteim=cmake --builddirectory=build --parallel
 %:
 	dh $@ $(dh_args)
 
+override_dh_installinit:
+	dh_installinit --name=virtualizm-wsproxy --no-stop-on-upgrade --no-start
+
 #override_dh_strip:
 #	#do not strip binaries

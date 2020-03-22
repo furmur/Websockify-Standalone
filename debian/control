@@ -1,11 +1,11 @@
-Source: virtualizm-websockify
+Source: virtualizm-wsproxy
 Section: net
 Priority: optional
 Maintainer: Michael Furmur <m.furmur@gmail.com>
 Build-Depends: debhelper (>= 7.0.50~)
 Standards-Version: 3.9.5
 
-Package: websockify
+Package: virtualizm-wsproxy
 Architecture: any
 Depends: ${misc:Depends}, ${shlibs:Depends}
 Description: WS to TCP proxy
