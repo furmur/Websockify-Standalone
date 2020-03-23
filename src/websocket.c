@@ -34,6 +34,8 @@ int ssl_initialized = 0;
 int pipe_error = 0;
 settings_t settings;
 
+static char forbidden_response[] = "HTTP/1.1 403 Forbidden\r\nConnection: Close\r\n";
+static size_t forbidden_response_len = sizeof(forbidden_response);
 
 void traffic(const char * token) {
     if ((settings.verbose) && (! settings.daemon)) {
@@ -792,8 +794,12 @@ void start_server() {
     serv_addr.sin_port = htons(settings.listen_port);
     
     /* Resolve listen address */
-    if (resolve_host(&serv_addr.sin_addr, settings.listen_host) < -1) {
-        fatal("Could not resolve listen address");
+    if(strlen(settings.listen_host)) {
+        if (resolve_host(&serv_addr.sin_addr, settings.listen_host) < -1) {
+            fatal("Could not resolve listen address");
+        }
+    } else {
+        serv_addr.sin_addr.s_addr = INADDR_ANY;
     }
 
     setsockopt(lsock, SOL_SOCKET, SO_REUSEADDR, (char *)&sopt, sizeof(sopt));
@@ -828,12 +834,19 @@ void start_server() {
         }
         handler_msg("got client connection from %s\n",
                     inet_ntoa(cli_addr.sin_addr));
-        
+
+        if(acl_match_ipv4(settings.src_whitelist, &cli_addr.sin_addr)) {
+            handler_msg("client addr not matched with src_whitelist\n");
+            send(csock, forbidden_response, forbidden_response_len, 0);
+            close(csock);
+            continue;
+        }
+
         if (!settings.run_once) {
             handler_msg("forking handler process\n");
             pid = fork();
         }
-        
+
         if (pid == 0) {  // handler process
             ws_ctx = do_handshake(csock);
             if (settings.run_once) {

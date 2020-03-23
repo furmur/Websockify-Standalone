@@ -15,6 +15,7 @@
 #include <string.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <arpa/inet.h>
 #include <netdb.h>
 #include <sys/time.h>
 #include <sys/select.h>
@@ -256,7 +257,14 @@ void proxy_handler(ws_ctx_t *ws_ctx) {
         close(tsock);
         return;
     }
-    
+
+    if(acl_match_ipv4(settings.dst_whitelist, &taddr.sin_addr)) {
+        handler_msg("target addr %s not matched with dst_whitelist\n",
+                    ws_ctx->target_host);
+        close(tsock);
+        return;
+    }
+
     if (connect(tsock, (struct sockaddr *) &taddr, sizeof(taddr)) < 0) {
         handler_emsg("Could not connect to target: %s\n",
                      strerror(errno));
@@ -267,14 +275,14 @@ void proxy_handler(ws_ctx_t *ws_ctx) {
     if ((settings.verbose) && (! settings.daemon)) {
         printf("%s", traffic_legend);
     }
-    
+
     do_proxy(ws_ctx, tsock);
-    
+
     shutdown(tsock, SHUT_RDWR);
     close(tsock);
 }
 
-void start(char *listen_host, int listen_port)
+void start()
 {
     if (!settings.cert) {
         /* Make sure it's always set to something */
@@ -286,9 +294,6 @@ void start(char *listen_host, int listen_port)
     settings.ssl_only     = 0;
     settings.daemon       = 0;
     settings.run_once     = 0;
-
-    strcpy(settings.listen_host, listen_host);
-    settings.listen_port  = listen_port;
 
     settings.handler = proxy_handler;
     start_server();

@@ -2,6 +2,8 @@
 
 #include <netinet/in.h>
 
+#include "acl.h"
+
 #define BUFSIZE 65536
 #define DBUFSIZE (BUFSIZE * 3) / 4 - 20
 
@@ -76,6 +78,9 @@ typedef struct {
     int ssl_only;
     int daemon;
     int run_once;
+
+    struct acl_t *src_whitelist;
+    struct acl_t *dst_whitelist;
 } settings_t;
 
 

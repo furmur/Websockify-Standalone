@@ -6,7 +6,7 @@ After=local-fs.target network.target time-sync.target
 EnvironmentFile=/etc/default/virtualizm-wsproxy
 User=wsproxy
 PermissionsStartOnly=true
-ExecStart=/usr/bin/virtualizm-wsproxy -i ${ADDR} -p ${PORT}
+ExecStart=/usr/bin/virtualizm-wsproxy -i ${ADDR} -p ${PORT} ${SRC_WHITELIST} ${DST_WHITELIST}
 
 #Restart=on-failure
 #RestartSec=1s

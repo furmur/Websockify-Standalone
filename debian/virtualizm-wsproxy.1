@@ -18,3 +18,9 @@ IP adddress for WS socket
 .TP
 \fB\-p\fR port
 port for WS socket
+.TP
+\fB\-s\fR, \fB\-\-src\-whitelist\fR list_def
+restrict allowed source IP addresses for incoming WebSocket connections (comma-separated networks list in CIDR notation)
+.TP
+\fB\-d\fR, \fB\-\-dst\-whitelist\fR list_def
+restrict allowed destination IP addresses for outgoing TCP connections (comma-separated networks list in CIDR notation)
