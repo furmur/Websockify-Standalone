@@ -47,7 +47,7 @@ int main(int argc, char **argv)
     };
 
     settings.src_whitelist = NULL;
-    settings.src_whitelist = NULL;
+    settings.dst_whitelist = NULL;
     settings.listen_host[0] = '\0';
     settings.listen_port = 52525;
 
