@@ -1,3 +1,9 @@
+virtualizm-wsproxy (0.0.2) stable; urgency=medium
+
+  * add --src-whitelist, --dst-whitelist options
+
+ -- Michael Furmur <m.furmur@gmail.com>  Mon, 23 Mar 2020 03:21:57 +0200
+
 virtualizm-wsproxy (0.0.1) stable; urgency=medium
 
   * initial
