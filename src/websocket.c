@@ -700,8 +700,8 @@ ws_ctx_t *do_handshake(int sock) {
     if (ws_ctx->hybi > 0) {
         handler_msg("using protocol HyBi/IETF 6455 %d\n", ws_ctx->hybi);
         gen_sha1(headers, sha1);
-        //snprintf(response, sizeof(response), SERVER_HANDSHAKE_HYBI, sha1, response_protocol);
-        snprintf(response, sizeof(response), SERVER_HANDSHAKE_HYBI_NO_PROTOCOL, sha1);
+        snprintf(response, sizeof(response), SERVER_HANDSHAKE_HYBI, sha1, response_protocol);
+        //snprintf(response, sizeof(response), SERVER_HANDSHAKE_HYBI_NO_PROTOCOL, sha1);
     } else {
         if (ws_ctx->hixie == 76) {
             handler_msg("using protocol Hixie 76\n");
