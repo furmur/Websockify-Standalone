@@ -1,3 +1,9 @@
+virtualizm-wsproxy (0.0.3) stable; urgency=medium
+
+  * add Sec-WebSocket-Protocol header for HyBi handshake
+
+ -- Michael Furmur <m.furmur@gmail.com>  Thu, 02 Apr 2020 14:09:22 +0300
+
 virtualizm-wsproxy (0.0.2) stable; urgency=medium
 
   * add --src-whitelist, --dst-whitelist options
