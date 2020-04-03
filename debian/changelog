@@ -1,3 +1,9 @@
+virtualizm-wsproxy (0.0.5) stable; urgency=medium
+
+  * add opt -v. fix X-Forwarded-For header parsing
+
+ -- Michael Furmur <m.furmur@gmail.com>  Fri, 03 Apr 2020 14:04:34 +0300
+
 virtualizm-wsproxy (0.0.4) stable; urgency=medium
 
   * terse connections logging
