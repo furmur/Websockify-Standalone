@@ -41,7 +41,7 @@ static char forbidden_response[] = "HTTP/1.1 403 Forbidden\r\nConnection: Close\
 static size_t forbidden_response_len = sizeof(forbidden_response);
 
 void traffic(const char * token) {
-    if ((settings.verbose) && (! settings.daemon)) {
+    if ((settings.verbose > 1) && (! settings.daemon)) {
         fprintf(stdout, "%s", token);
         fflush(stdout);
     }
@@ -363,7 +363,9 @@ int parse_handshake(ws_ctx_t *ws_ctx, char *handshake) {
          *uri_start, *uri_end;
     headers_t *headers = ws_ctx->headers;
 
-    //handler_msg("got handshake request:\n%s\n",handshake);
+    if(settings.verbose) {
+        handler_msg("got WS handshake request:\n%s\n",handshake);
+    }
 
     headers->key1[0] = '\0';
     headers->key2[0] = '\0';
@@ -557,6 +559,7 @@ int parse_handshake(ws_ctx_t *ws_ctx, char *handshake) {
     end+=5; /* skip "port=" */
     *uri_end = '\0';
     ws_ctx->target_port = atoi(end);
+    *uri_end = ' ';
     if(!ws_ctx->target_port) {
         handler_emsg("unexpected port value '%s'. " EXPECTED_URI_FORMAT,end);
         return 0;
@@ -568,12 +571,15 @@ int parse_handshake(ws_ctx_t *ws_ctx, char *handshake) {
     }
 
     start = strcasestr(handshake, "\r\nX-Forwarded-For: ");
+
     if(start) {
         headers->x_forwarded_for[0] = '\0';
-        start += 18;
+        start += 19;
         end = strstr(start, "\r\n");
         strncpy(headers->x_forwarded_for, start, end-start);
         headers->x_forwarded_for[end-start] = '\0';
+    } else {
+        headers->x_forwarded_for[0] = '\0';
     }
 
     return 1;
@@ -723,8 +729,11 @@ ws_ctx_t *do_handshake(int sock) {
         snprintf(response, sizeof(response), SERVER_HANDSHAKE_HIXIE, pre, headers->origin,
                  pre, scheme, headers->host, headers->path, pre, "base64", trailer);
     }
-    
-    //handler_msg("handshake response:\n%s\n", response);
+
+    if(settings.verbose) {
+        handler_msg("send WS handshake reply:\n%s\n", response);
+    }
+
     ws_send(ws_ctx, response, strlen(response));
     
     return ws_ctx;
@@ -792,8 +801,7 @@ void start_server() {
     struct sockaddr_in serv_addr;
     socklen_t clilen;
     ws_ctx_t *ws_ctx;
-    
-    
+
     /* Initialize buffers */
     lsock = socket(AF_INET, SOCK_STREAM, 0);
     if (lsock < 0) { error("ERROR creating listener socket"); }

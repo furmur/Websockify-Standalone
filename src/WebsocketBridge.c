@@ -289,9 +289,9 @@ void proxy_handler(ws_ctx_t *ws_ctx) {
         return;
     }
 
-    if ((settings.verbose) && (! settings.daemon)) {
+    /*if ((settings.verbose) && (! settings.daemon)) {
         printf("%s", traffic_legend);
-    }
+    }*/
 
     do_proxy(ws_ctx, tsock);
 
@@ -307,7 +307,7 @@ void start()
     }
     settings.key = "";
 
-    settings.verbose      = 0;
+    //settings.verbose      = 0;
     settings.ssl_only     = 0;
     settings.daemon       = 0;
     settings.run_once     = 0;

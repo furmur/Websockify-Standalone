@@ -21,6 +21,7 @@ void usage(int exit_code)
     "Options:\n"
     "  -i listen_ip  : IP adddress for WS socket\n"
     "  -p port       : port for WS socket\n"
+    "  -v            : enable verbose mode. -v to print WS handshake data. -vv to print traffic events in addition\n"
     "  -h            : this help\n"
     "\n"
     "  -s, --src-whitelist list_def  : restrict allowed source IP addresses for incoming WebSocket connections\n"
@@ -39,13 +40,14 @@ int main(int argc, char **argv)
     progname = strrchr(argv[0], '/');
     progname = (progname == NULL ? argv[0] : progname + 1);
 
-    static const char* opts = "hi:p:s:d:";
+    static const char* opts = "hvi:p:s:d:";
     static struct option long_options[] = {
         {"src-whitelist", required_argument, NULL, 's'},
         {"dst-whitelist", required_argument, NULL, 'd'},
         {NULL, 0, NULL, 0}
     };
 
+    settings.verbose = 0;
     settings.src_whitelist = NULL;
     settings.dst_whitelist = NULL;
     settings.listen_host[0] = '\0';
@@ -61,6 +63,9 @@ int main(int argc, char **argv)
             usage(EXIT_FAILURE);
         case 'h':
             usage(EXIT_SUCCESS);
+        case 'v':
+            settings.verbose++;
+            break;
         case 'i':
             strcpy(settings.listen_host, optarg);
             break;
@@ -97,8 +102,15 @@ int main(int argc, char **argv)
         strcpy(settings.listen_host, "127.0.0.1");
     }
 
-    acl_print(settings.src_whitelist, "src_whitelist");
-    acl_print(settings.dst_whitelist, "dst_whitelist");
+    if(settings.verbose) {
+        printf("verbosity level: %d\n",
+            settings.verbose);
+    }
+
+    if(settings.src_whitelist)
+        acl_print(settings.src_whitelist, "src_whitelist");
+    if(settings.dst_whitelist)
+        acl_print(settings.dst_whitelist, "dst_whitelist");
 
     start();
 

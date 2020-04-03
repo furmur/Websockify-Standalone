@@ -4,5 +4,6 @@ ADDR=127.0.0.1
 # WS listen port
 PORT=52525
 
+#OPTS="-v"
 #SRC_WHITELIST="--src-whitelist=127.0.0.1,10.255.0.0/24"
 #DST_WHITELIST="--dst-whitelist=10.255.0.0/16"
