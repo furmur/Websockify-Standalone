@@ -1,3 +1,10 @@
+virtualizm-wsproxy (0.0.4) stable; urgency=medium
+
+  * terse connections logging
+  * parse X-Forwarded-For
+
+ -- Michael Furmur <m.furmur@gmail.com>  Fri, 03 Apr 2020 03:21:35 +0300
+
 virtualizm-wsproxy (0.0.3) stable; urgency=medium
 
   * add Sec-WebSocket-Protocol header for HyBi handshake
