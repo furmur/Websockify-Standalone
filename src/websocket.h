@@ -47,6 +47,7 @@ typedef struct {
     char version[1024+1];
     char connection[1024+1];
     char protocols[1024+1];
+    char x_forwarded_for[1024+1];
     char key1[1024+1];
     char key2[1024+1];
     char key3[8+1];
@@ -78,6 +79,9 @@ typedef struct {
     int ssl_only;
     int daemon;
     int run_once;
+    struct sockaddr_in ws_client_addr;
+    struct sockaddr_in tcp_server_addr;
+    char ws_endpoint[256], tcp_endpoint[256];
 
     struct acl_t *src_whitelist;
     struct acl_t *dst_whitelist;
@@ -93,12 +97,19 @@ ssize_t ws_send(ws_ctx_t *ctx, const void *buf, size_t len);
 
 #define gen_handler_msg(stream, ...) \
 if (! settings.daemon) { \
-fprintf(stream, "  %d: ", settings.handler_id); \
+fprintf(stream, "%d: ", settings.handler_id); \
 fprintf(stream, __VA_ARGS__); \
 }
 
 #define handler_msg(...) gen_handler_msg(stdout, __VA_ARGS__);
 #define handler_emsg(...) gen_handler_msg(stderr, __VA_ARGS__);
+
+#define connection_msg(fmt, args...) \
+    fprintf(stderr, "%d: %s => %s " fmt, \
+        settings.handler_id, \
+        settings.ws_endpoint, \
+        settings.tcp_endpoint, \
+        ##args); \
 
 void traffic(const char * token);
 

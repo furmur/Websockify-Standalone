@@ -55,17 +55,22 @@ extern settings_t settings;
 
 void do_proxy(ws_ctx_t *ws_ctx, int target) {
     fd_set rlist, wlist, elist;
-    struct timeval tv;
+    struct timeval tv, start_time, end_time, duration;
     int i, maxfd, client = ws_ctx->sockfd;
     unsigned int opcode, left, ret;
     unsigned int tout_start, tout_end, cout_start, cout_end;
     unsigned int tin_start, tin_end;
     ssize_t len, bytes;
-    
+    size_t ws_rcvd = 0, ws_snt = 0, tcp_rcvd= 0, tcp_snt = 0;
+
     tout_start = tout_end = cout_start = cout_end;
     tin_start = tin_end = 0;
     maxfd = client > target ? client+1 : target+1;
-    
+
+    connection_msg("connected\n");
+
+    gettimeofday(&start_time, NULL);
+
     while (1) {
         tv.tv_sec = 1;
         tv.tv_usec = 0;
@@ -96,11 +101,11 @@ void do_proxy(ws_ctx_t *ws_ctx, int target) {
         if (pipe_error) { break; }
         
         if (FD_ISSET(target, &elist)) {
-            handler_emsg("target exception\n");
+            connection_msg("target exception\n");
             break;
         }
         if (FD_ISSET(client, &elist)) {
-            handler_emsg("client exception\n");
+            connection_msg("client exception\n");
             break;
         }
         
@@ -117,10 +122,11 @@ void do_proxy(ws_ctx_t *ws_ctx, int target) {
             bytes = send(target, ws_ctx->tout_buf + tout_start, len, 0);
             if (pipe_error) { break; }
             if (bytes < 0) {
-                handler_emsg("target connection error: %s\n",
+                connection_msg("target connection error: %s\n",
                              strerror(errno));
                 break;
             }
+            tcp_snt += bytes;
             tout_start += bytes;
             if (tout_start >= tout_end) {
                 tout_start = tout_end = 0;
@@ -135,10 +141,11 @@ void do_proxy(ws_ctx_t *ws_ctx, int target) {
             bytes = ws_send(ws_ctx, ws_ctx->cout_buf + cout_start, len);
             if (pipe_error) { break; }
             if (len < 3) {
-                handler_emsg("len: %d, bytes: %d: %d\n",
+                connection_msg("len: %d, bytes: %d: %d\n",
                              (int) len, (int) bytes,
                              (int) *(ws_ctx->cout_buf + cout_start));
             }
+            ws_snt += bytes;
             cout_start += bytes;
             if (cout_start >= cout_end) {
                 cout_start = cout_end = 0;
@@ -152,10 +159,11 @@ void do_proxy(ws_ctx_t *ws_ctx, int target) {
             bytes = recv(target, ws_ctx->cin_buf, DBUFSIZE , 0);
             if (pipe_error) { break; }
             if (bytes <= 0) {
-                handler_emsg("target closed connection\n");
+                connection_msg("connection closed by target\n");
                 break;
             }
             cout_start = 0;
+            tcp_rcvd += bytes;
             if (ws_ctx->hybi) {
                 cout_end = encode_hybi(ws_ctx->cin_buf, bytes,
                                        ws_ctx->cout_buf, BUFSIZE, ws_ctx->opcode);
@@ -171,7 +179,7 @@ void do_proxy(ws_ctx_t *ws_ctx, int target) {
              printf("\n");
              */
             if (cout_end < 0) {
-                handler_emsg("encoding error\n");
+                connection_msg("encoding error\n");
                 break;
             }
             traffic("{");
@@ -181,9 +189,10 @@ void do_proxy(ws_ctx_t *ws_ctx, int target) {
             bytes = ws_recv(ws_ctx, ws_ctx->tin_buf + tin_end, BUFSIZE-1);
             if (pipe_error) { break; }
             if (bytes <= 0) {
-                handler_emsg("client closed connection\n");
+                connection_msg("connection closed by client\n");
                 break;
             }
+            ws_rcvd += bytes;
             tin_end += bytes;
             /*
              printf("before decode: ");
@@ -205,7 +214,7 @@ void do_proxy(ws_ctx_t *ws_ctx, int target) {
             }
             
             if (opcode == 8) {
-                handler_msg("client sent orderly close frame\n");
+                connection_msg("closing frame from client\n");
                 break;
             }
             
@@ -217,7 +226,7 @@ void do_proxy(ws_ctx_t *ws_ctx, int target) {
              printf("\n");
              */
             if (len < 0) {
-                handler_emsg("decoding error\n");
+                connection_msg("decoding error\n");
                 break;
             }
             if (left) {
@@ -233,45 +242,53 @@ void do_proxy(ws_ctx_t *ws_ctx, int target) {
             tout_end = len;
         }
     }
+
+    gettimeofday(&end_time, NULL);
+    timersub(&end_time, &start_time, &duration);
+
+    connection_msg("closed. ws rcvd/tcp sent: (%lu/%lu), tcp rcvd/ws sent: (%lu/%lu), duration:%lu.%03lu\n",
+                   ws_rcvd,  tcp_snt, tcp_rcvd, ws_snt,
+                   duration.tv_sec, duration.tv_usec/1000);
 }
 
 void proxy_handler(ws_ctx_t *ws_ctx) {
     int tsock = 0;
-    struct sockaddr_in taddr;
-    
-    handler_msg("connecting to: %s:%d\n", ws_ctx->target_host, ws_ctx->target_port);
-    
+
+    //handler_msg("connecting to: %s:%d\n", ws_ctx->target_host, ws_ctx->target_port);
+
+    bzero((char *) &settings.tcp_server_addr, sizeof(settings.tcp_server_addr));
+    settings.tcp_server_addr.sin_family = AF_INET;
+    settings.tcp_server_addr.sin_port = htons(ws_ctx->target_port);
+
+    /* Resolve target address */
+    if (resolve_host(&settings.tcp_server_addr.sin_addr, ws_ctx->target_host) == -1) {
+        handler_emsg("Could not resolve target address: %s\n", ws_ctx->target_host);
+        return;
+    }
+
+    if(acl_match_ipv4(settings.dst_whitelist, &settings.tcp_server_addr.sin_addr)) {
+        handler_emsg("target addr %s not matched with dst_whitelist\n",
+                    ws_ctx->target_host);
+        return;
+    }
+
+    snprintf(settings.tcp_endpoint, 256, "%s:%u",
+             inet_ntoa(settings.tcp_server_addr.sin_addr),
+             settings.tcp_server_addr.sin_port);
+
     tsock = socket(AF_INET, SOCK_STREAM, 0);
     if (tsock < 0) {
-        handler_emsg("Could not create target socket: %s\n",
+        connection_msg("could not create target socket: %s\n",
                      strerror(errno));
         return;
     }
-    bzero((char *) &taddr, sizeof(taddr));
-    taddr.sin_family = AF_INET;
-    taddr.sin_port = htons(ws_ctx->target_port);
-    
-    /* Resolve target address */
-    if (resolve_host(&taddr.sin_addr, ws_ctx->target_host) == -1) {
-        handler_emsg("Could not resolve target address\n");
+
+    if (connect(tsock, (struct sockaddr *) &settings.tcp_server_addr, sizeof(settings.tcp_server_addr)) < 0) {
+        connection_msg("failed to connect TCP endpoint: %s\n", strerror(errno));
         close(tsock);
         return;
     }
 
-    if(acl_match_ipv4(settings.dst_whitelist, &taddr.sin_addr)) {
-        handler_msg("target addr %s not matched with dst_whitelist\n",
-                    ws_ctx->target_host);
-        close(tsock);
-        return;
-    }
-
-    if (connect(tsock, (struct sockaddr *) &taddr, sizeof(taddr)) < 0) {
-        handler_emsg("Could not connect to target: %s\n",
-                     strerror(errno));
-        close(tsock);
-        return;
-    }
-    
     if ((settings.verbose) && (! settings.daemon)) {
         printf("%s", traffic_legend);
     }
@@ -290,7 +307,7 @@ void start()
     }
     settings.key = "";
 
-    settings.verbose      = 1;
+    settings.verbose      = 0;
     settings.ssl_only     = 0;
     settings.daemon       = 0;
     settings.run_once     = 0;

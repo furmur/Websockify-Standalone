@@ -7,6 +7,9 @@
  * openssl req -new -x509 -days 365 -nodes -out self.pem -keyout self.pem
  * as taken from http://docs.python.org/dev/library/ssl.html#certificates
  */
+
+#define _GNU_SOURCE
+
 #include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -355,16 +358,12 @@ int decode_hybi(unsigned char *src, size_t srclength,
     return target_offset;
 }
 
-
-#define dbg(fmt, args...) handler_msg(fmt "\n", ##args)
-//#define dbg(...) ;
-
 int parse_handshake(ws_ctx_t *ws_ctx, char *handshake) {
     char *start, *end,
          *uri_start, *uri_end;
     headers_t *headers = ws_ctx->headers;
 
-    handler_msg("got handshake request:\n%s\n",handshake);
+    //handler_msg("got handshake request:\n%s\n",handshake);
 
     headers->key1[0] = '\0';
     headers->key2[0] = '\0';
@@ -376,7 +375,7 @@ int parse_handshake(ws_ctx_t *ws_ctx, char *handshake) {
     uri_start = start = handshake+4;
     end = strstr(start, " HTTP/1.1");
     if (!end) {
-        dbg("expected HTTP/1.1 proto");
+        handler_emsg("expected HTTP/1.1 proto");
         return 0;
     }
     uri_end = end;
@@ -385,7 +384,7 @@ int parse_handshake(ws_ctx_t *ws_ctx, char *handshake) {
 
     start = strstr(handshake, "\r\nHost: ");
     if (!start) {
-        dbg("no Host header");
+        handler_emsg("no Host header");
         return 0;
     }
     start += 8;
@@ -395,7 +394,7 @@ int parse_handshake(ws_ctx_t *ws_ctx, char *handshake) {
 
     start = strstr(handshake, "\r\nSec-WebSocket-Version: ");
     if (start) {
-        dbg("found Sec-WebSocket-Version header. use HyBi/RFC 6455 handshake");
+        //dbg("found Sec-WebSocket-Version header. use HyBi/RFC 6455 handshake");
         // HyBi/RFC 6455
         start += 25;
         end = strstr(start, "\r\n");
@@ -406,7 +405,7 @@ int parse_handshake(ws_ctx_t *ws_ctx, char *handshake) {
         
         start = strstr(handshake, "\r\nSec-WebSocket-Key: ");
         if (!start) {
-            dbg("found Sec-WebSocket-Version header. use HyBi/RFC 6455");
+            //dbg("found Sec-WebSocket-Version header. use HyBi/RFC 6455");
             return 0;
         }
         start += 21;
@@ -430,31 +429,31 @@ int parse_handshake(ws_ctx_t *ws_ctx, char *handshake) {
             end = strstr(start, "\r\n");
             strncpy(headers->protocols, start, end-start);
             headers->protocols[end-start] = '\0';
-            dbg("set protocols '%s' from Sec-WebSocket-Protocol", headers->protocols);
+            //dbg("set protocols '%s' from Sec-WebSocket-Protocol", headers->protocols);
         } else {
-            dbg("set protocol to 'binary'");
+            //dbg("set protocol to 'binary'");
             strcpy(headers->protocols, "binary");
         }
     } else {
-        dbg("no Sec-WebSocket-Version header use Hixie 75 or 76 handshake");
+        //dbg("no Sec-WebSocket-Version header use Hixie 75 or 76 handshake");
         // Hixie 75 or 76
         ws_ctx->hybi = 0;
 
         start = strstr(handshake, "\r\n\r\n");
         if (!start) {
-            dbg("no trailing newlines");
+            handler_emsg("no trailing newlines");
             return 0;
         }
         start += 4;
         if (strlen(start) == 8) {
-            dbg("use Hixie 76 handshake");
+            //dbg("use Hixie 76 handshake");
             ws_ctx->hixie = 76;
             strncpy(headers->key3, start, 8);
             headers->key3[8] = '\0';
 
             start = strstr(handshake, "\r\nSec-WebSocket-Key1: ");
             if (!start) {
-                dbg("no Sec-WebSocket-Key1 header");
+                handler_emsg("no Sec-WebSocket-Key1 header");
                 return 0;
             }
             start += 22;
@@ -464,7 +463,7 @@ int parse_handshake(ws_ctx_t *ws_ctx, char *handshake) {
             
             start = strstr(handshake, "\r\nSec-WebSocket-Key2: ");
             if (!start) {
-                dbg("no Sec-WebSocket-Key2 header");
+                //dbg("no Sec-WebSocket-Key2 header");
                 return 0;
             }
             start += 22;
@@ -472,7 +471,7 @@ int parse_handshake(ws_ctx_t *ws_ctx, char *handshake) {
             strncpy(headers->key2, start, end-start);
             headers->key2[end-start] = '\0';
         } else {
-            dbg("use Hixie 75 handshake");
+            //dbg("use Hixie 75 handshake");
             ws_ctx->hixie = 75;
         }
     }
@@ -493,79 +492,88 @@ int parse_handshake(ws_ctx_t *ws_ctx, char *handshake) {
         strncpy(headers->origin, start, end-start);
         headers->origin[end-start] = '\0';
     } else if(ws_ctx->hixie) {
-        dbg("no Origin or Sec-WebSocket-Origin header on using hixie %d",ws_ctx->hixie);
+        handler_emsg("no Origin or Sec-WebSocket-Origin header on using hixie %d",ws_ctx->hixie);
         return 0;
     }
 
 #define EXPECTED_URI_FORMAT "expected URI format /?host=TARGET_HOST&port=TARGET_PORT"
 
     //parse target host/port attributes from URI
-    handler_msg("uri: '%.*s'\n",(int)(uri_end - uri_start), uri_start);
+    //handler_msg("uri: '%.*s'\n",(int)(uri_end - uri_start), uri_start);
     start = memchr(uri_start, '?', uri_end - uri_start);
     if(!start) {
-        dbg("got uri without parameters. " EXPECTED_URI_FORMAT);
+        handler_emsg("got uri without parameters. " EXPECTED_URI_FORMAT);
         return 0;
     }
     start++;
-    dbg("start %p uri_end %p", start, uri_end);
+    //dbg("start %p uri_end %p", start, uri_end);
     if(start == uri_end) {
-        dbg("empty URI parameters. " EXPECTED_URI_FORMAT);
+        handler_emsg("empty URI parameters. " EXPECTED_URI_FORMAT);
         return 0;
     }
     end = memchr(start, '&',uri_end - start);
     if(!end) {
-        dbg("got uri without parameters separator &. " EXPECTED_URI_FORMAT);
+        handler_emsg("got uri without parameters separator &. " EXPECTED_URI_FORMAT);
         return 0;
     }
     //parse host= parameter
-    dbg("start %p end %p", start, end);
+    //dbg("start %p end %p", start, end);
     if(start == end) {
-        dbg("got uri with empty first parameter. " EXPECTED_URI_FORMAT);
+        handler_emsg("got uri with empty first parameter. " EXPECTED_URI_FORMAT);
         return 0;
     }
     if(end - start < 6/* "host=" and at least one value symbol */) {
-        dbg("uri first parameter is too short to be valid. " EXPECTED_URI_FORMAT);
+        handler_emsg("uri first parameter is too short to be valid. " EXPECTED_URI_FORMAT);
         return 0;
     }
     if(bcmp(start, "host=", 5) != 0) {
-        dbg("unexpected first uri parameter. " EXPECTED_URI_FORMAT);
+        handler_emsg("unexpected first uri parameter. " EXPECTED_URI_FORMAT);
         return 0;
     }
     start+=5; /* skip "host=" */
     memcpy(ws_ctx->target_host, start, end-start);
     ws_ctx->target_host[end-start] = '\0';
-    dbg("parsed target host: '%s'",ws_ctx->target_host);
+    //dbg("parsed target host: '%s'",ws_ctx->target_host);
 
     //parse port= parameter
-    dbg("start: %p, end: %p, uri_end: %p", start, end, uri_end);
+    //dbg("start: %p, end: %p, uri_end: %p", start, end, uri_end);
     end++;
     if(end == uri_end) {
-        dbg("got uri with empty second parameter. " EXPECTED_URI_FORMAT);
+        handler_emsg("got uri with empty second parameter. " EXPECTED_URI_FORMAT);
         return 0;
     }
     if(0!=memchr(end, '&',uri_end - end)) {
-        dbg("too many uri parameters. " EXPECTED_URI_FORMAT);
+        handler_emsg("too many uri parameters. " EXPECTED_URI_FORMAT);
         return 0;
     }
     if(uri_end - end < 6/* "port=" and at least one value symbol */) {
-        dbg("uri second parameter is too short to be valid. " EXPECTED_URI_FORMAT);
+        handler_emsg("uri second parameter is too short to be valid. " EXPECTED_URI_FORMAT);
         return 0;
     }
     if(bcmp(end, "port=", 5) != 0) {
-        dbg("unexpected first uri parameter. " EXPECTED_URI_FORMAT);
+        handler_emsg("unexpected first uri parameter. " EXPECTED_URI_FORMAT);
         return 0;
     }
     end+=5; /* skip "port=" */
     *uri_end = '\0';
     ws_ctx->target_port = atoi(end);
     if(!ws_ctx->target_port) {
-        dbg("unexpected port value '%s'. " EXPECTED_URI_FORMAT,end);
+        handler_emsg("unexpected port value '%s'. " EXPECTED_URI_FORMAT,end);
         return 0;
     }
-    dbg("parsed target port: %d",ws_ctx->target_port);
+    //dbg("parsed target port: %d",ws_ctx->target_port);
     if(ws_ctx->target_port <= 0 || ws_ctx->target_port > 0xffff) {
-        dbg("port value %d is not within unsigned short range",ws_ctx->target_port);
+        handler_emsg("port value %d is not within unsigned short range",ws_ctx->target_port);
         return 0;
+    }
+
+    start = strcasestr(handshake, "\r\nX-Forwarded-For: ");
+    if(start) {
+        headers->x_forwarded_for[0] = '\0';
+        start += 18;
+        end = strstr(start, "\r\n");
+        strncpy(headers->x_forwarded_for, start, end-start);
+        headers->x_forwarded_for[end-start] = '\0';
     }
 
     return 1;
@@ -633,7 +641,7 @@ ws_ctx_t *do_handshake(int sock) {
     len = recv(sock, handshake, 1024, MSG_PEEK);
     handshake[len] = 0;
     if (len == 0) {
-        handler_msg("ignoring empty handshake\n");
+        handler_emsg("ignoring empty handshake\n");
         return NULL;
     } else if ((bcmp(handshake, "\x16", 1) == 0) ||
                (bcmp(handshake, "\x80", 1) == 0)) {
@@ -641,14 +649,14 @@ ws_ctx_t *do_handshake(int sock) {
         //WARNING: no SSL support
         return NULL;
     } else if (settings.ssl_only) {
-        handler_msg("non-SSL connection disallowed\n");
+        handler_emsg("non-SSL connection disallowed\n");
         return NULL;
     } else {
         ws_ctx = alloc_ws_ctx();
         ws_socket(ws_ctx, sock);
         if (! ws_ctx) { return NULL; }
         scheme = "ws";
-        handler_msg("using plain (not SSL) socket\n");
+        //handler_msg("using plain (not SSL) socket\n");
     }
     offset = 0;
     for (i = 0; i < 10; i++) {
@@ -698,17 +706,17 @@ ws_ctx_t *do_handshake(int sock) {
     }
     
     if (ws_ctx->hybi > 0) {
-        handler_msg("using protocol HyBi/IETF 6455 %d\n", ws_ctx->hybi);
+        //handler_msg("using protocol HyBi/IETF 6455 %d\n", ws_ctx->hybi);
         gen_sha1(headers, sha1);
         snprintf(response, sizeof(response), SERVER_HANDSHAKE_HYBI, sha1, response_protocol);
         //snprintf(response, sizeof(response), SERVER_HANDSHAKE_HYBI_NO_PROTOCOL, sha1);
     } else {
         if (ws_ctx->hixie == 76) {
-            handler_msg("using protocol Hixie 76\n");
+            //handler_msg("using protocol Hixie 76\n");
             gen_md5(headers, trailer);
             pre = "Sec-";
         } else {
-            handler_msg("using protocol Hixie 75\n");
+            //handler_msg("using protocol Hixie 75\n");
             trailer[0] = '\0';
             pre = "";
         }
@@ -716,7 +724,7 @@ ws_ctx_t *do_handshake(int sock) {
                  pre, scheme, headers->host, headers->path, pre, "base64", trailer);
     }
     
-    handler_msg("handshake response:\n%s\n", response);
+    //handler_msg("handshake response:\n%s\n", response);
     ws_send(ws_ctx, response, strlen(response));
     
     return ws_ctx;
@@ -781,7 +789,7 @@ void daemonize(int keepfd) {
 
 void start_server() {
     int lsock, csock, pid, sopt = 1, i;
-    struct sockaddr_in serv_addr, cli_addr;
+    struct sockaddr_in serv_addr;
     socklen_t clilen;
     ws_ctx_t *ws_ctx;
     
@@ -822,33 +830,42 @@ void start_server() {
            settings.listen_host, settings.listen_port);
     
     while (1) {
-        clilen = sizeof(cli_addr);
+        clilen = sizeof(settings.ws_client_addr);
         pipe_error = 0;
         pid = 0;
         csock = accept(lsock,
-                       (struct sockaddr *) &cli_addr,
+                       (struct sockaddr *) &settings.ws_client_addr,
                        &clilen);
         if (csock < 0) {
             error("ERROR on accept");
             continue;
         }
-        handler_msg("got client connection from %s\n",
-                    inet_ntoa(cli_addr.sin_addr));
 
-        if(acl_match_ipv4(settings.src_whitelist, &cli_addr.sin_addr)) {
-            handler_msg("client addr not matched with src_whitelist\n");
+        snprintf(settings.ws_endpoint, 256, "%s:%u",
+                 inet_ntoa(settings.ws_client_addr.sin_addr),
+                 settings.ws_client_addr.sin_port);
+
+        handler_msg("ws connection from %s\n", settings.ws_endpoint);
+
+        if(acl_match_ipv4(settings.src_whitelist, &settings.ws_client_addr.sin_addr)) {
+            handler_emsg("client endpoint %s is not matched with src_whitelist. "
+                         "reject with 403 Forbidden\n",
+                         settings.ws_endpoint);
             send(csock, forbidden_response, forbidden_response_len, 0);
             close(csock);
             continue;
         }
 
         if (!settings.run_once) {
-            handler_msg("forking handler process\n");
+            //handler_msg("forking handler process\n");
             pid = fork();
         }
 
         if (pid == 0) {  // handler process
             ws_ctx = do_handshake(csock);
+            if(ws_ctx->headers->x_forwarded_for[0]) {
+                handler_msg("ws X-Forwarded-For: %s\n", ws_ctx->headers->x_forwarded_for);
+            }
             if (settings.run_once) {
                 if (ws_ctx == NULL) {
                     // Not a real WebSocket connection
@@ -860,7 +877,7 @@ void start_server() {
                 }
             }
             if (ws_ctx == NULL) {
-                handler_msg("No connection after handshake\n");
+                handler_emsg("No connection after handshake\n");
                 break;   // Child process exits
             }
             
@@ -882,10 +899,9 @@ void start_server() {
             shutdown(csock, SHUT_RDWR);
             close(csock);
         }
-        handler_msg("handler exit\n");
+        //handler_msg("child exit\n");
     } else {
         handler_msg("wsproxy exit\n");
     }
-    
 }
 
