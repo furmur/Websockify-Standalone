@@ -93,6 +93,7 @@ int resolve_host(struct in_addr *sin_addr, const char *hostname);
 ssize_t ws_recv(ws_ctx_t *ctx, void *buf, size_t len);
 
 ssize_t ws_send(ws_ctx_t *ctx, const void *buf, size_t len);
+ssize_t ws_send_ping(ws_ctx_t *ctx);
 
 
 #define gen_handler_msg(stream, ...) \

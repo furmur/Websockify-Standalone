@@ -40,6 +40,10 @@ settings_t settings;
 static char forbidden_response[] = "HTTP/1.1 403 Forbidden\r\nConnection: Close\r\n";
 static size_t forbidden_response_len = sizeof(forbidden_response);
 
+                      //opcode: ping, len:0
+static char ping_buf[2] = { 0x9 | 0x80, 0 };
+size_t ping_buf_len = 2;
+
 void traffic(const char * token) {
     if ((settings.verbose > 1) && (! settings.daemon)) {
         fprintf(stdout, "%s", token);
@@ -92,6 +96,11 @@ ssize_t ws_recv(ws_ctx_t *ctx, void *buf, size_t len) {
 
 ssize_t ws_send(ws_ctx_t *ctx, const void *buf, size_t len) {
     return send(ctx->sockfd, buf, len, 0);
+}
+
+ssize_t ws_send_ping(ws_ctx_t *ctx) {
+    if(!ctx->hybi) return 0;
+    return send(ctx->sockfd, ping_buf, ping_buf_len, 0) != ping_buf_len;
 }
 
 ws_ctx_t *alloc_ws_ctx() {
@@ -306,7 +315,8 @@ int decode_hybi(unsigned char *src, size_t srclength,
         payload = frame + hdr_length + 4*masked;
         
         if (*opcode != OPCODE_TEXT && *opcode != OPCODE_BINARY) {
-            handler_msg("Ignoring non-data frame, opcode 0x%x\n", *opcode);
+            if(settings.verbose > 1)
+                handler_msg("Ignoring non-data frame, opcode 0x%x\n", *opcode);
             continue;
         }
         
