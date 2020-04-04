@@ -1,3 +1,10 @@
+virtualizm-wsproxy (0.0.6) stable; urgency=medium
+
+  * rewrited to use epoll
+  * send ping WS control frames every 10 seconds
+
+ -- Michael Furmur <m.furmur@gmail.com>  Sat, 04 Apr 2020 22:00:31 +0300
+
 virtualizm-wsproxy (0.0.5) stable; urgency=medium
 
   * add opt -v. fix X-Forwarded-For header parsing
